@@ -74,7 +74,7 @@ class KMeansClusterer:
                 if verbose:
                     line = "Epoch {:2d} Iter {:2d}: SSE={:10.4f}, GAIN={:10.4f}"
                     print(line.format(epoch, t, new_sse, gain))
-                if gain < self.min_gain:
+                if gain < self.min_gain or t+1 >= max_iter:
                     if new_sse < min_sse:
                         min_sse, self.C, self.u = new_sse, C, u
                     break
