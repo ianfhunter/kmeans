@@ -30,6 +30,9 @@ def main():
     parser.add_argument(
         '-v', '--verbose', default=0, action='store_true',
         help='Show verbose info')
+    parser.add_argument(
+        '-i', '--invariant', type=int, default=None,
+        help='Single invariant centroid.')
     args = parser.parse_args()
 
     # prepare data
@@ -38,7 +41,7 @@ def main():
     # initialize clusterer
     c = KMeansClusterer(
         data, k=args.k, max_iter=args.max_iter, max_epoch=args.epoch,
-        verbose=args.verbose)
+        verbose=args.verbose, initial_centroids=None, invariant_centroids=args.invariant)
 
     # the result
     plt.figure(1)
@@ -57,6 +60,9 @@ def main():
 
     # plot the centroids in black squares
     if dims == 1:
+        d = c.u
+        np.set_printoptions(suppress=False)
+        print("Centroids Calculated: \n", d)
         plt.plot(c.u[:, 0], np.zeros((c.u.shape[0], 1)), 'ks')
     else:
         plt.plot(c.u[:, 0], c.u[:, 1], 'ks')

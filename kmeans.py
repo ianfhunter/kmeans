@@ -1,10 +1,10 @@
-
 import numpy as np
 import tqdm
+import warnings
 
 def centroid(data):
     """Find the centroid of the given data."""
-    return np.mean(data, 0)
+    return np.mean(data)
 
 
 def sse(data):
@@ -12,27 +12,39 @@ def sse(data):
     u = centroid(data)
     return np.sum(np.linalg.norm(data - u, 2, 1))
 
+def find_nearest(array, value):
+    """
+    Get nearest entry in an array to the given value.
+    Returns: Index of that value.
+    Source: https://stackoverflow.com/a/2566508/1421555
+    """
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
 
 class KMeansClusterer:
     """The standard k-means clustering algorithm."""
 
     def __init__(self, data=None, k=2, min_gain=0.01, max_iter=100,
-                 max_epoch=10, verbose=True):
+                 max_epoch=10, verbose=True, initial_centroids=None, invariant_centroids=None):
         """Learns from data if given."""
         if data is not None:
-            self.fit(data, k, min_gain, max_iter, max_epoch, verbose)
+            self.fit(data, k, min_gain, max_iter, max_epoch, verbose, initial_centroids, invariant_centroids)
 
     def fit(self, data, k=2, min_gain=0.01, max_iter=100, max_epoch=10,
-            verbose=True):
+            verbose=True, initial_centroids=None, invariant_centroids=None):
         """Learns from the given data.
 
         Args:
-            data:      The dataset with m rows each with n features
-            k:         The number of clusters
-            min_gain:  Minimum gain to keep iterating
-            max_iter:  Maximum number of iterations to perform
-            max_epoch: Number of random starts, to find global optimum
-            verbose:   Print diagnostic message if True
+            data:                   The dataset with m rows each with n features
+            k:                      The number of clusters
+            min_gain:               Minimum gain to keep iterating
+            max_iter:               Maximum number of iterations to perform
+            max_epoch:              Number of random starts, to find global optimum
+            verbose:                Print diagnostic message if True
+            initial_centroids:      Seeder centroids, to speed up convergence.
+            invariant_centroids:    Static values for centroids.
 
         Returns:
             self
@@ -41,6 +53,16 @@ class KMeansClusterer:
         # u: Centroid Location
         # c: points in cluster
         # k: cluster amount
+
+        # Validation
+        if invariant_centroids is not None:
+            invariant_centroids = [invariant_centroids]
+            if initial_centroids is None:
+                warnings.warn("Initial Centroids initialized with invariant values.")
+                initial_centroids = invariant_centroids
+
+            for c in invariant_centroids:
+                assert c in initial_centroids, "Cannot guarantee good clustering initialization if desired centroid not included in starting seeds"
 
         # Pre-process
         self.data = np.matrix(data)
@@ -53,11 +75,35 @@ class KMeansClusterer:
 
         # Perform multiple random init for global optimum
         min_sse = np.inf
+
+        if initial_centroids is not None:
+            if max_epoch != 1:
+                warnings.warn("Max Epoch set to 1 internally as additional epoch redundant with initialized centroids.")
+                max_epoch = 1
+
         for epoch in tqdm.tqdm(range(max_epoch)):
 
             # Randomly initialize k centroids
-            indices = np.random.choice(len(data), k, replace=False)
-            u = self.data[indices, :]
+            if initial_centroids is not None:
+                # TODO: Allow partial creation
+
+                if len(initial_centroids) < k:
+                    # Use Random values for those values not initialized.
+                    indices = np.random.choice(len(data), k - len(initial_centroids), replace=False)
+                    u = np.array(self.data[indices, :])
+
+                else:
+                    u = np.array([])
+
+                for i in initial_centroids:
+                    u = np.append(u,[i])
+
+                u = u.reshape((u.shape[0], 1))
+
+            else:
+                # Use Random values
+                indices = np.random.choice(len(data), k, replace=False)
+                u = self.data[indices, :]
 
             # Loop
             t = 0
@@ -71,9 +117,21 @@ class KMeansClusterer:
                     j = np.argmin(np.linalg.norm(x - u, 2, 1))
                     C[j] = x if C[j] is None else np.vstack((C[j], x))
 
+
                 # Centroid update
                 for j in range(k):
                     u[j] = centroid(C[j])
+
+                """
+                Substitute in the invariant centroids for the cloest predictions
+                This is important so that centroids can continue to pass over each other.
+                A straight retention of the index would result in a 'barrier' in the clustering
+                """
+
+                # TODO: >1 invariant field
+                if invariant_centroids is not None:
+                    idx = find_nearest(u, invariant_centroids[0])
+                    u[idx] = invariant_centroids[0]
 
                 # Loop termination condition
                 if t >= max_iter:
