@@ -7,6 +7,7 @@ partitioned clustering algorithms: *k-means* and *bisecting k-means*.
 
 This fork adds (or intends to add):
  - 1D Clustering
+ - Initialization of centroids
  - Invariant centroid configuration
 
 Requirements
