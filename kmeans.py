@@ -62,12 +62,14 @@ class KMeansClusterer:
                 initial_centroids = invariant_centroids
 
             for c in invariant_centroids:
-                assert c in initial_centroids, "Cannot guarantee good clustering initialization if desired centroid not included in starting seeds"
+                if c not in initial_centroids:
+                    warnings.warn("Cannot guarantee good clustering initialization if desired centroid not included in starting seeds")
 
         # Pre-process
         self.data = np.matrix(data)
         self.k = k
         self.min_gain = min_gain
+        self.u = None   # Default in case no solution is reached.
 
         if self.data.shape[0] == 1:
             # Swap dimensions if 1D
@@ -141,7 +143,7 @@ class KMeansClusterer:
                 if verbose:
                     line = "Epoch {:2d} Iter {:2d}: SSE={:10.4f}, GAIN={:10.4f}"
                     print(line.format(epoch, t, new_sse, gain))
-                if gain < self.min_gain:
+                if gain < self.min_gain or t+1 >= max_iter:
                     if new_sse < min_sse:
                         min_sse, self.C, self.u = new_sse, C, u
                     break

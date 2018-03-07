@@ -62,7 +62,7 @@ def main():
     if dims == 1:
         d = c.u
         np.set_printoptions(suppress=False)
-        print("Centroids Calculated: \n", d)
+        # print("Centroids Calculated: \n", d)
         plt.plot(c.u[:, 0], np.zeros((c.u.shape[0], 1)), 'ks')
     else:
         plt.plot(c.u[:, 0], c.u[:, 1], 'ks')
