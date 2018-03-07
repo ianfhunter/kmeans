@@ -1,6 +1,6 @@
 
 import numpy as np
-
+import tqdm
 
 def centroid(data):
     """Find the centroid of the given data."""
@@ -37,14 +37,23 @@ class KMeansClusterer:
         Returns:
             self
         """
+        # Developer Reference:
+        # u: Centroid Location
+        # c: points in cluster
+        # k: cluster amount
+
         # Pre-process
         self.data = np.matrix(data)
         self.k = k
         self.min_gain = min_gain
 
+        if self.data.shape[0] == 1:
+            # Swap dimensions if 1D
+            self.data = np.swapaxes(self.data,0,1)
+
         # Perform multiple random init for global optimum
         min_sse = np.inf
-        for epoch in range(max_epoch):
+        for epoch in tqdm.tqdm(range(max_epoch)):
 
             # Randomly initialize k centroids
             indices = np.random.choice(len(data), k, replace=False)

@@ -42,11 +42,24 @@ def main():
 
     # the result
     plt.figure(1)
+
+    if len(c.C[0][1]) == 1:
+        dims = 1
+    else:
+        dims = 0    # TODO: Implement support for variable amount of dimensions. 2D only other version supported.
+
     # plot the clusters in different colors
     for i in range(c.k):
-        plt.plot(c.C[i][:, 0], c.C[i][:, 1], 'x')
+        if dims == 1:
+            plt.plot(c.C[i][:, 0], np.zeros((c.C[i].shape[0], 1)), 'x')
+        else:
+            plt.plot(c.C[i][:, 0], c.C[i][:, 1], 'x')
+
     # plot the centroids in black squares
-    plt.plot(c.u[:, 0], c.u[:, 1], 'ks')
+    if dims == 1:
+        plt.plot(c.u[:, 0], np.zeros((c.u.shape[0], 1)), 'ks')
+    else:
+        plt.plot(c.u[:, 0], c.u[:, 1], 'ks')
     plt.show()
 
 
