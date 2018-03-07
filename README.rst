@@ -4,6 +4,11 @@ k-means Clustering
 This is a simple pythonic implementation of the two centroid-based
 partitioned clustering algorithms: *k-means* and *bisecting k-means*.
 
+
+This fork adds (or intends to add):
+ - 1D Clustering
+ - Invariant centroid configuration
+
 Requirements
 ------------
 
@@ -58,7 +63,8 @@ To use your own datasets and change various clustering paramters, see help text.
   $ python3 test_bisecting.py --help
 
 
-Author
+Contributers
 ------
 
 Manish Munikar <munikarmanish@gmail.com>
+Ian Hunter <dontemailme>
