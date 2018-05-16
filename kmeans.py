@@ -31,6 +31,8 @@ class KMeansClusterer:
         """Learns from data if given."""
         if data is not None:
             self.fit(data, k, min_gain, max_iter, max_epoch, verbose, initial_centroids, invariant_centroids)
+        else:
+            assert 0
 
     def fit(self, data, k=2, min_gain=0.01, max_iter=100, max_epoch=10,
             verbose=True, initial_centroids=None, invariant_centroids=None):
@@ -53,6 +55,17 @@ class KMeansClusterer:
         # u: Centroid Location
         # c: points in cluster
         # k: cluster amount
+
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+        if len(np.unique(data)) <= k:
+            print("Values are not unique enough to be clustered")
+            self.data = np.matrix(data)
+            self.k = k
+            self.min_gain = min_gain
+            self.u = None
+            self.C = [None] * k
+            return self
 
         # Validation
         if invariant_centroids is not None:
@@ -83,10 +96,13 @@ class KMeansClusterer:
                 warnings.warn("Max Epoch set to 1 internally as additional epoch redundant with initialized centroids.")
                 max_epoch = 1
 
-        for epoch in tqdm.tqdm(range(max_epoch)):
+#        for epoch in tqdm.tqdm(range(max_epoch)):
+        for epoch in range(max_epoch):
+            print("Epoch")
 
             # Randomly initialize k centroids
             if initial_centroids is not None:
+                print("A")
                 # TODO: Allow partial creation
 
                 if len(initial_centroids) < k:
@@ -104,6 +120,7 @@ class KMeansClusterer:
 
             else:
                 # Use Random values
+                print("B")
                 indices = np.random.choice(len(data), k, replace=False)
                 u = self.data[indices, :]
 
@@ -111,6 +128,7 @@ class KMeansClusterer:
             t = 0
             old_sse = np.inf
             while True:
+                # print(">")
                 t += 1
 
                 # Cluster assignment
@@ -119,9 +137,18 @@ class KMeansClusterer:
                     j = np.argmin(np.linalg.norm(x - u, 2, 1))
                     C[j] = x if C[j] is None else np.vstack((C[j], x))
 
-
-                # Centroid update
+                #  Centroid update
                 for j in range(k):
+                    # print("@", C[j])
+                    if C[j] is None:
+                        print(C)
+                        for jj in range(k):
+                            if C[jj] is None:
+                                C[jj] = 0
+                                u[jj] = centroid(C[jj])
+                        self.u = u
+                        # print("Return Early")
+                        return self         # Data has been fully clustered, we cannot do any more
                     u[j] = centroid(C[j])
 
                 """
@@ -130,13 +157,13 @@ class KMeansClusterer:
                 A straight retention of the index would result in a 'barrier' in the clustering
                 """
 
-                # TODO: >1 invariant field
                 if invariant_centroids is not None:
                     idx = find_nearest(u, invariant_centroids[0])
                     u[idx] = invariant_centroids[0]
 
                 # Loop termination condition
                 if t >= max_iter:
+                    # print("MAxed out")
                     break
                 new_sse = np.sum([sse(C[j]) for j in range(k)])
                 gain = old_sse - new_sse
@@ -146,6 +173,7 @@ class KMeansClusterer:
                 if gain < self.min_gain or t+1 >= max_iter:
                     if new_sse < min_sse:
                         min_sse, self.C, self.u = new_sse, C, u
+                    # print("Gain")
                     break
                 else:
                     old_sse = new_sse
