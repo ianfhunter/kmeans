@@ -6,11 +6,48 @@ def centroid(data):
     """Find the centroid of the given data."""
     return np.mean(data)
 
+def centroid_grad(data, grads):
+    """Find the centroid of the given data."""
+    # print("Data:", data)
+    # print("Gradients: ", grads)
+    # Element-wise Multiplication
 
-def sse(data):
+    # Only magnitude matters, not direction
+    g = np.abs(grads)
+
+    # Normalize range so that data values are preserved upon multiplying
+    # zi =   xi−min(x) 
+    #      max(x)−min(x)
+    # min_range = np.min(g)
+    # max_range = np.max(g)
+    # g = (g-min_range)/(max_range-min_range)
+    # print("Scaled Gradients: ", g)
+
+    c = np.average(data, weights=g)
+    # print("Traditional Centroid: ", centroid(data))
+    # print("Gradient-based Centroid: ", c)
+    quit()
+    return c
+
+
+def sse(data, grad=None):
     """Calculate the SSE of the given data."""
-    u = centroid(data)
+    if grad is not None:
+        u = centroid_grad(data, grad)
+    else:
+        u = centroid(data)
     return np.sum(np.linalg.norm(data - u, 2, 1))
+
+def find_nearest(array, value):
+    """
+    Get nearest entry in an array to the given value.
+    Returns: Index of that value.
+    Source: https://stackoverflow.com/a/2566508/1421555
+    """
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
 
 def find_nearest(array, value):
     """
@@ -27,15 +64,18 @@ class KMeansClusterer:
     """The standard k-means clustering algorithm."""
 
     def __init__(self, data=None, k=2, min_gain=0.01, max_iter=100,
-                 max_epoch=10, verbose=True, initial_centroids=None, invariant_centroids=None):
+                 max_epoch=10, verbose=True, initial_centroids=None, invariant_centroids=None, gradients=None):
         """Learns from data if given."""
+
+        
         if data is not None:
-            self.fit(data, k, min_gain, max_iter, max_epoch, verbose, initial_centroids, invariant_centroids)
+            self.fit(data, k, min_gain, max_iter, max_epoch, verbose, initial_centroids, invariant_centroids, gradients)
         else:
             assert 0
 
     def fit(self, data, k=2, min_gain=0.01, max_iter=100, max_epoch=10,
-            verbose=True, initial_centroids=None, invariant_centroids=None):
+            verbose=True, initial_centroids=None, invariant_centroids=None, gradients=None
+            ):
         """Learns from the given data.
 
         Args:
@@ -80,6 +120,7 @@ class KMeansClusterer:
 
         # Pre-process
         self.data = np.matrix(data)
+        self.gradients = np.matrix(gradients)
         self.k = k
         self.min_gain = min_gain
         self.u = None   # Default in case no solution is reached.
@@ -109,20 +150,25 @@ class KMeansClusterer:
                     # Use Random values for those values not initialized.
                     indices = np.random.choice(len(data), k - len(initial_centroids), replace=False)
                     u = np.array(self.data[indices, :])
-
+                    g = np.array(self.gradients[indices, :])
                 else:
                     u = np.array([])
+                    g = np.array([])
 
                 for i in initial_centroids:
-                    u = np.append(u,[i])
+                    u = np.append(u, [i])
+                    # NOT APPLICABLE FOR GRAD
+                    # g = np.append(g, [i])
 
                 u = u.reshape((u.shape[0], 1))
+                g = g.reshape((g.shape[0], 1))
 
             else:
                 # Use Random values
                 print("B")
                 indices = np.random.choice(len(data), k, replace=False)
                 u = self.data[indices, :]
+                g = self.gradients[indices, :]
 
             # Loop
             t = 0
@@ -133,9 +179,12 @@ class KMeansClusterer:
 
                 # Cluster assignment
                 C = [None] * k
-                for x in self.data:
+                G = [None] * k
+
+                for x, y in zip(self.data, self.gradients):
                     j = np.argmin(np.linalg.norm(x - u, 2, 1))
                     C[j] = x if C[j] is None else np.vstack((C[j], x))
+                    G[j] = y if G[j] is None else np.vstack((G[j], y))
 
                 #  Centroid update
                 for j in range(k):
@@ -145,11 +194,12 @@ class KMeansClusterer:
                         for jj in range(k):
                             if C[jj] is None:
                                 C[jj] = 0
-                                u[jj] = centroid(C[jj])
+                                u[jj] = centroid(C[jj]) 
                         self.u = u
-                        # print("Return Early")
+                        print("Return Early")
                         return self         # Data has been fully clustered, we cannot do any more
-                    u[j] = centroid(C[j])
+                
+                    u[j] = centroid_grad(C[j], G[j])
 
                 """
                 Substitute in the invariant centroids for the cloest predictions
@@ -211,6 +261,7 @@ class BisectingKMeansClusterer:
         self.kmeans = KMeansClusterer()
         self.C = [data, ]
         self.k = len(self.C)
+        # Make the first K items into clusters
         self.u = np.reshape(
             [centroid(self.C[i]) for i in range(self.k)], (self.k, 2))
 

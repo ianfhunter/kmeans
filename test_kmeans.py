@@ -33,15 +33,27 @@ def main():
     parser.add_argument(
         '-i', '--invariant', type=int, default=None,
         help='Single invariant centroid.')
+    parser.add_argument(
+        '-gr', '--gradients', type=int, default=None,
+        help='Sample Gradients.')
     args = parser.parse_args()
 
     # prepare data
     data = np.loadtxt(args.datafile)
 
+    # Make gradients
+    if args.gradients is not None:
+        args.gradients = np.random.uniform(-1,1, data.shape)
+
+
     # initialize clusterer
     c = KMeansClusterer(
         data, k=args.k, max_iter=args.max_iter, max_epoch=args.epoch,
-        verbose=args.verbose, initial_centroids=None, invariant_centroids=args.invariant)
+        verbose=args.verbose, initial_centroids=None, invariant_centroids=args.invariant,
+        gradients=args.gradients)
+
+    print("RESULT OBTAINED")
+    print(c)
 
     # the result
     plt.figure(1)
